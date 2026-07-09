@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SageReader - Modern PDF & Book TTS Player</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="A clean, modern, and adaptive web application for reading and listening to PDFs and books. Features high-quality Text-To-Speech with synchronized word highlighting and theme customization.">
+  <meta name="keywords" content="pdf reader, text to speech, audiobook reader, tts, pdf tts, epub, book reader, web app">
+  <meta name="author" content="Antigravity">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- Local Stylesheet -->
+  <link rel="stylesheet" href="./styles.css">
+  <!-- PDF.js library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body class="theme-light">
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-logo" id="header-logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          <path d="M12 6v10"></path>
+          <path d="M8 10h8"></path>
+        </svg>
+        <span class="logo-text">Sage<span>Reader</span></span>
+      </div>
+
+      <div class="header-actions">
+        <!-- View Mode Toggle -->
+        <div class="view-toggle-group">
+          <button id="btn-view-reader" class="toggle-btn active" title="Reader View (Best for TTS)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <span>Reader View</span>
+          </button>
+          <button id="btn-view-page" class="toggle-btn" title="Page View (Original PDF)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+            <span>Page View</span>
+          </button>
+        </div>
+
+        <!-- Theme Selector -->
+        <div class="theme-dropdown-container">
+          <button id="btn-theme" class="header-btn" title="Change Theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon" id="theme-icon">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span class="theme-label">Theme</span>
+          </button>
+          <div class="theme-menu" id="theme-menu">
+            <button class="theme-option active" data-theme="light">
+              <span class="color-dot light-dot"></span> Light
+            </button>
+            <button class="theme-option" data-theme="dark">
+              <span class="color-dot dark-dot"></span> Midnight
+            </button>
+            <button class="theme-option" data-theme="sepia">
+              <span class="color-dot sepia-dot"></span> Sepia
+            </button>
+            <button class="theme-option" data-theme="sage">
+              <span class="color-dot sage-dot"></span> Sage Forest
+            </button>
+          </div>
+        </div>
+
+        <!-- Sidebar Toggle (Mobile Friendly) -->
+        <button id="btn-sidebar-toggle" class="header-btn mobile-only" title="Toggle Sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- Sidebar / Left Panel -->
+      <aside class="app-sidebar" id="sidebar">
+        <!-- File Upload Area -->
+        <div class="sidebar-section file-section">
+          <h3>Library</h3>
+          <div class="upload-dropzone" id="dropzone">
+            <input type="file" id="file-input" accept=".pdf,.txt,.md" class="file-input-hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="upload-icon">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p class="upload-title">Import Document</p>
+            <p class="upload-subtitle">Drag & Drop or Click</p>
+          </div>
+          
+          <div class="library-container" id="library-container">
+            <div class="library-header">
+              <span>My Bookshelf</span>
+              <button id="btn-clear-library" class="clear-lib-btn" title="Clear All Books">Clear All</button>
+            </div>
+            <ul class="library-list" id="library-list-ul">
+              <!-- Dynamically populated from IndexedDB -->
+              <li class="empty-library-msg">Shelf is empty</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Navigation and Stats -->
+        <div class="sidebar-section navigation-section">
+          <h3>Document Structure</h3>
+          <div class="page-nav-controls">
+            <button id="btn-prev-page" class="nav-arrow-btn" title="Previous Page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <div class="page-counter">
+              <input type="number" id="current-page-input" value="1" min="1" class="page-number-input">
+              <span class="page-total">of <span id="total-pages">1</span></span>
+            </div>
+            <button id="btn-next-page" class="nav-arrow-btn" title="Next Page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+          <!-- Page List (TOC alternative for easy access) -->
+          <div class="pages-list-container">
+            <ul class="pages-list" id="pages-list-ul">
+              <!-- Dynamically populated page list -->
+              <li class="empty-list-msg">No pages loaded</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Voice Settings Panel -->
+        <div class="sidebar-section settings-section">
+          <h3>Speech & Reading</h3>
+          
+          <div class="setting-item">
+            <label for="voice-select">Voice</label>
+            <div class="select-wrapper">
+              <select id="voice-select" class="form-select">
+                <option value="">Loading system voices...</option>
+              </select>
+              <div class="select-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+            <small class="voice-badge" id="voice-badge">Auto-selected: Female Voice</small>
+          </div>
+
+          <div class="setting-item" style="margin-top: 16px;">
+            <label for="font-select">Reader Font</label>
+            <div class="select-wrapper">
+              <select id="font-select" class="form-select">
+                <option value="serif">Vintage Serif (Lora)</option>
+                <option value="sans-serif">Modern Sans (Inter)</option>
+                <option value="outfit">Outfit Geometric</option>
+              </select>
+              <div class="select-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Reader Area -->
+      <main class="reader-workspace">
+        
+        <!-- Welcome Overlay (Before File Upload) -->
+        <div class="welcome-overlay" id="welcome-view">
+          <div class="welcome-content animate-fade-in">
+            <div class="welcome-visual">
+              <div class="pulsing-glow"></div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="book-ill">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+            </div>
+            <h1>Transform Reading into Listening</h1>
+            <p>Upload a PDF, TXT or Markdown file to read with dynamic high-quality TTS voice narration, speed adjustments, and auto-scrolled text tracking.</p>
+            <button id="btn-get-started" class="primary-btn">
+              <span>Choose Document</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-arrow">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Viewer Pane -->
+        <div class="viewer-pane hidden" id="viewer-pane">
+          
+          <!-- Reader View (Extracted Text with Highlights) -->
+          <div class="reader-view-container" id="reader-view">
+            <div class="reader-content-box" id="reader-content-box">
+              <!-- Dynamically populated parsed sentences -->
+              <p class="reader-help-msg">Loading text content for TTS reading...</p>
+            </div>
+          </div>
+
+          <!-- Page View (Canvas rendering of PDF pages) -->
+          <div class="page-view-container hidden" id="page-view">
+            <div class="canvas-wrapper">
+              <canvas id="pdf-canvas"></canvas>
+            </div>
+          </div>
+
+        </div>
+      </main>
+    </div>
+
+    <!-- Floating Audio Control Deck -->
+    <footer class="audio-control-deck hidden" id="control-deck">
+      <div class="control-deck-background"></div>
+      <div class="control-deck-inner">
+        
+        <!-- Progress bar/timeline -->
+        <div class="timeline-container">
+          <span class="timeline-time" id="time-current">00:00</span>
+          <div class="timeline-bar-wrapper" id="timeline-slider-track">
+            <div class="timeline-progress-bar" id="timeline-progress"></div>
+            <div class="timeline-handle" id="timeline-handle"></div>
+          </div>
+          <span class="timeline-time" id="time-total">00:00</span>
+        </div>
+
+        <div class="control-deck-row">
+          
+          <!-- Current Reading Info (Left) -->
+          <div class="deck-meta-info">
+            <h4 id="deck-doc-title">Book Title</h4>
+            <p id="deck-progress-status">Reading: Page 1 of 12 • Sentence 1/20</p>
+          </div>
+
+          <!-- Central Playback Controls (Center) -->
+          <div class="deck-play-controls">
+            <!-- Backward Sentence -->
+            <button id="btn-skip-prev" class="control-btn" title="Previous Sentence">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                <line x1="5" y1="19" x2="5" y2="5"></line>
+              </svg>
+            </button>
+            
+            <!-- Play/Pause -->
+            <button id="btn-play-pause" class="play-btn" title="Play">
+              <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor" class="play-svg">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <svg id="pause-icon" viewBox="0 0 24 24" fill="currentColor" class="pause-svg hidden">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+            </button>
+
+            <!-- Forward Sentence -->
+            <button id="btn-skip-next" class="control-btn" title="Next Sentence">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                <line x1="19" y1="5" x2="19" y2="19"></line>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Right settings controls (Volume / Speed) -->
+          <div class="deck-volume-speed-controls">
+            <!-- Speed Control -->
+            <div class="slider-control speed-slider-control">
+              <button class="control-btn-small" id="btn-speed-indicator" title="Speed Menu">1.0x</button>
+              <div class="slider-wrapper">
+                <input type="range" id="speed-slider" min="0.5" max="3" step="0.1" value="1.0" title="Narrator Speed">
+                <span class="tooltip-val" id="speed-val">1.0x</span>
+              </div>
+            </div>
+
+            <!-- Volume Control -->
+            <div class="slider-control volume-slider-control">
+              <button class="control-btn-small" id="btn-volume-icon" title="Mute/Unmute">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="volume-svg">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+              </button>
+              <div class="slider-wrapper">
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.8" title="Volume">
+                <span class="tooltip-val" id="volume-val">80%</span>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Local Logic Script -->
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

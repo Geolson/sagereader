@@ -1,0 +1,7 @@
+AuraReader is a modern, high-quality document reader. It translates written words into natural spoken voice.
+
+This application runs entirely in the browser. It does not require any remote server backend.
+
+You can customize themes to make reading more comfortable. Choose from Light, Midnight, Sepia, or Sage.
+
+Adjust the voice speed and volume to suit your preference. You can also skip sentences forward or backward.

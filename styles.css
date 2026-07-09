@@ -1370,13 +1370,16 @@ body {
   /* Responsive collapsible sidebar layout */
   .app-sidebar {
     position: absolute;
-    left: 0;
+    right: 0;
+    left: auto;
     top: var(--header-height);
     bottom: 0;
     width: 280px;
-    transform: translateX(-100%);
+    transform: translateX(100%);
     box-shadow: var(--shadow-lg);
     z-index: 200;
+    border-left: 1px solid var(--border-color);
+    border-right: none;
   }
   
   .app-sidebar.open {

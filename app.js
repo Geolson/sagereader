@@ -48,6 +48,8 @@ const state = {
   playbackRate: 1.0,
   playbackVolume: 0.8,
   activeUtterance: null,
+  sentenceCharOffset: 0,
+  activeWordCharStart: 0,
   
   // Layout Options
   selectedFont: 'serif' // 'serif', 'sans-serif', 'outfit'
@@ -377,16 +379,23 @@ function populateVoiceDropdown() {
   const englishVoices = state.voices.filter(v => v.lang.toLowerCase().startsWith('en'));
   const otherVoices = state.voices.filter(v => !v.lang.toLowerCase().startsWith('en'));
   
-  const femaleVoiceKeywords = ['google', 'aria', 'jenny', 'zira', 'samantha', 'hazel', 'female', 'natural'];
+  const naturalKeywords = ['natural', 'neural', 'online', 'cloud'];
+  const femaleKeywords = ['google', 'aria', 'jenny', 'zira', 'samantha', 'hazel', 'female'];
   
   const sortedEnglish = [...englishVoices].sort((a, b) => {
     const aName = a.name.toLowerCase();
     const bName = b.name.toLowerCase();
-    const aMatch = femaleVoiceKeywords.some(kw => aName.includes(kw));
-    const bMatch = femaleVoiceKeywords.some(kw => bName.includes(kw));
     
-    if (aMatch && !bMatch) return -1;
-    if (!aMatch && bMatch) return 1;
+    const aNatural = naturalKeywords.some(kw => aName.includes(kw));
+    const bNatural = naturalKeywords.some(kw => bName.includes(kw));
+    if (aNatural && !bNatural) return -1;
+    if (!aNatural && bNatural) return 1;
+    
+    const aFemale = femaleKeywords.some(kw => aName.includes(kw));
+    const bFemale = femaleKeywords.some(kw => bName.includes(kw));
+    if (aFemale && !bFemale) return -1;
+    if (!aFemale && bFemale) return 1;
+    
     return 0;
   });
 
@@ -398,12 +407,17 @@ function populateVoiceDropdown() {
     option.value = voice.voiceURI;
     
     let displayName = voice.name;
-    const isFemaleKeyword = femaleVoiceKeywords.some(kw => voice.name.toLowerCase().includes(kw));
-    if (isFemaleKeyword) {
-      displayName += ' ✨ (Recommended Female)';
-      if (!autoSelectedVoice && voice.lang.toLowerCase().startsWith('en')) {
-        autoSelectedVoice = voice;
-      }
+    const isNatural = naturalKeywords.some(kw => voice.name.toLowerCase().includes(kw));
+    const isFemale = femaleKeywords.some(kw => voice.name.toLowerCase().includes(kw));
+    
+    if (isNatural) {
+      displayName += ' 💎 (Natural Neural)';
+    } else if (isFemale) {
+      displayName += ' ✨ (Recommended)';
+    }
+    
+    if (!autoSelectedVoice && voice.lang.toLowerCase().startsWith('en') && (isNatural || isFemale)) {
+      autoSelectedVoice = voice;
     }
     
     option.textContent = `${displayName} [${voice.lang}]`;
@@ -536,7 +550,7 @@ function initEventListeners() {
     dom.speedVal.textContent = `${val.toFixed(1)}x`;
     dom.btnSpeedIndicator.textContent = `${val.toFixed(1)}x`;
     if (state.isPlaying && !state.isPaused) {
-      speakSentence(state.currentSentenceIndex, true);
+      speakSentence(state.currentSentenceIndex, state.activeWordCharStart);
     }
   });
 
@@ -577,7 +591,7 @@ function initEventListeners() {
       state.selectedVoice = voiceObj;
       dom.voiceBadge.textContent = `Active: ${voiceObj.name.replace(/Microsoft|Google/gi, '').trim()}`;
       if (state.isPlaying && !state.isPaused) {
-        speakSentence(state.currentSentenceIndex, true);
+        speakSentence(state.currentSentenceIndex, state.activeWordCharStart);
       }
     }
   });
@@ -880,7 +894,7 @@ function renderReaderView() {
     span.addEventListener('click', (e) => {
       e.stopPropagation();
       state.currentSentenceIndex = index;
-      speakSentence(index, true);
+      speakSentence(index, 0);
     });
 
     dom.readerContentBox.appendChild(span);
@@ -964,7 +978,7 @@ function stopSpeech() {
   clearHighlights();
 }
 
-function speakSentence(index, forceRestart = false) {
+function speakSentence(index, resumeOffset = 0) {
   const pageObj = state.pagesData[state.currentPage];
   if (!pageObj || index < 0 || index >= pageObj.sentences.length) {
     stopSpeech();
@@ -980,7 +994,17 @@ function speakSentence(index, forceRestart = false) {
   highlightSentenceElement(index);
   updatePlaybackPanelMeta();
 
-  const textToSpeak = pageObj.sentences[index];
+  const fullText = pageObj.sentences[index];
+  state.sentenceCharOffset = resumeOffset;
+  
+  const textToSpeak = fullText.substring(resumeOffset);
+  if (!textToSpeak.trim()) {
+    state.sentenceCharOffset = 0;
+    state.activeWordCharStart = 0;
+    playNextSentence();
+    return;
+  }
+
   const utterance = new SpeechSynthesisUtterance(textToSpeak);
   state.activeUtterance = utterance;
 
@@ -993,28 +1017,18 @@ function speakSentence(index, forceRestart = false) {
 
   utterance.onboundary = (event) => {
     if (event.name === 'word') {
-      highlightActiveWord(textToSpeak, event.charIndex);
+      const absoluteCharIndex = state.sentenceCharOffset + event.charIndex;
+      state.activeWordCharStart = absoluteCharIndex;
+      highlightActiveWord(fullText, absoluteCharIndex);
     }
   };
 
   utterance.onend = () => {
     if (!state.isPlaying || state.isPaused) return;
     
-    const nextIdx = state.currentSentenceIndex + 1;
-    if (nextIdx < pageObj.sentences.length) {
-      speakSentence(nextIdx);
-    } else {
-      const nextPage = state.currentPage + 1;
-      if (nextPage <= state.totalPages) {
-        displayPage(nextPage).then(() => {
-          state.currentSentenceIndex = 0;
-          speakSentence(0);
-        });
-      } else {
-        stopSpeech();
-        alert("Finished reading document.");
-      }
-    }
+    state.sentenceCharOffset = 0;
+    state.activeWordCharStart = 0;
+    playNextSentence();
   };
 
   utterance.onerror = (e) => {
@@ -1025,6 +1039,25 @@ function speakSentence(index, forceRestart = false) {
   };
 
   window.speechSynthesis.speak(utterance);
+}
+
+function playNextSentence() {
+  const pageObj = state.pagesData[state.currentPage];
+  const nextIdx = state.currentSentenceIndex + 1;
+  if (nextIdx < pageObj.sentences.length) {
+    speakSentence(nextIdx);
+  } else {
+    const nextPage = state.currentPage + 1;
+    if (nextPage <= state.totalPages) {
+      displayPage(nextPage).then(() => {
+        state.currentSentenceIndex = 0;
+        speakSentence(0);
+      });
+    } else {
+      stopSpeech();
+      alert("Finished reading document.");
+    }
+  }
 }
 
 function skipNextSentence() {
